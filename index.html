@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>드럼 시퀀서 - 템포 조절</title>
+    <style>
+        * { -webkit-user-select: none; user-select: none; box-sizing: border-box; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        .sequencer { background: #333; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .row { display: flex; align-items: center; margin-bottom: 10px; }
+        .label { width: 80px; font-weight: bold; color: #00d2ff; font-size: 14px; }
+        .step { width: 40px; height: 40px; background: #444; border: 1px solid #222; margin: 2px; cursor: pointer; border-radius: 4px; }
+        .step.active { background: #ff4757; box-shadow: 0 0 10px #ff4757; }
+        .step.playing { border: 2px solid white; }
+
+        /* 컨트롤 영역 */
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 20px; background: #222; padding: 20px; border-radius: 15px; width: 440px; }
+        .btn-group { display: flex; gap: 10px; }
+        .btn { padding: 12px 30px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-play { background: #00ff88; }
+        .btn-stop { background: #ff4757; color: white; }
+
+        /* 슬라이더 스타일 */
+        .tempo-container { display: flex; align-items: center; gap: 15px; width: 100%; }
+        input[type=range] { flex-grow: 1; cursor: pointer; }
+        #bpm-value { font-family: monospace; font-size: 18px; color: #00ff88; width: 70px; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin-bottom: 20px;">DRUM MACHINE</h2>
+
+    <div class="sequencer">
+        <div class="row" id="kick-row">
+            <div class="label">KICK</div>
+            <script>for(let i=0; i<8; i++) document.write(`<div class="step" onclick="this.classList.toggle('active')"></div>`)</script>
+        </div>
+        <div class="row" id="snare-row">
+            <div class="label">SNARE</div>
+            <script>for(let i=0; i<8; i++) document.write(`<div class="step" onclick="this.classList.toggle('active')"></div>`)</script>
+        </div>
+        <div class="row" id="hihat-row">
+            <div class="label">HI-HAT</div>
+            <script>for(let i=0; i<8; i++) document.write(`<div class="step" onclick="this.classList.toggle('active')"></div>`)</script>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="tempo-container">
+            <span style="font-size: 12px; color: #888;">TEMPO</span>
+            <input type="range" id="bpm-slider" min="60" max="240" value="120" oninput="updateBPM(this.value)">
+            <span id="bpm-value">120 BPM</span>
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-play" onclick="startSequencer()">PLAY</button>
+            <button class="btn btn-stop" onclick="stopSequencer()">STOP</button>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let isPlaying = false;
+        let currentStep = 0;
+        let timerId = null;
+        let bpm = 120;
+
+        function updateBPM(val) {
+            bpm = val;
+            document.getElementById('bpm-value').innerText = val + " BPM";
+        }
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(freq, type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            if (type === 'hihat') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            } else {
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            }
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function runStep() {
+            if (!isPlaying) return;
+
+            const rows = [
+                { id: 'kick-row', freq: 150, type: 'kick' },
+                { id: 'snare-row', freq: 250, type: 'snare' },
+                { id: 'hihat-row', freq: 6000, type: 'hihat' }
+            ];
+
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('playing'));
+
+            rows.forEach(row => {
+                const stepElement = document.getElementById(row.id).querySelectorAll('.step')[currentStep];
+                stepElement.classList.add('playing');
+                if (stepElement.classList.contains('active')) playSound(row.freq, row.type);
+            });
+
+            currentStep = (currentStep + 1) % 8;
+
+            // 템포 계산 이론: 60초 / BPM = 1박자 시간. 
+            // 8비트 시퀀서이므로 1박자를 다시 절반으로 나눔 (0.5박자 단위)
+            const interval = (60 / bpm / 2) * 1000; 
+            timerId = setTimeout(runStep, interval);
+        }
+
+        function startSequencer() {
+            initAudio();
+            if (isPlaying) return;
+            isPlaying = true;
+            currentStep = 0;
+            runStep();
+        }
+
+        function stopSequencer() {
+            isPlaying = false;
+            clearTimeout(timerId);
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('playing'));
+        }
+    </script>
+</body>
+</html>
