@@ -2,8 +2,23 @@
 <html>
 <body>
 
+<h1 id="number">10</h1>
+
+<button onclick="increase()">+</button>
+<button onclick="decrease()">-</button>
+
 <script>
-alert("웹 실행 성공");
+let count = 10;
+
+function increase() {
+  count = count + 1;
+  document.getElementById("number").innerText = count;
+}
+
+function decrease() {
+  count = count - 1;
+  document.getElementById("number").innerText = count;
+}
 </script>
 
 </body>
