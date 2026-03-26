@@ -1,6 +1,41 @@
-<link rel="manifest" href="/manifest.json">
+<div class="chat-container">
+  <header class="chat-header">
+    <button>←</button>
+    <h2>코딩 친구</h2>
+    <button>☰</button>
+  </header>
 
-<meta name="theme-color" content="#4e73df">
+  <main class="message-list">
+    <div class="message received">
+      <div class="bubble">안녕! 프로젝트 잘 돼가?</div>
+      <span class="time">오후 2:00</span>
+    </div>
+    
+    <div class="message sent">
+      <div class="bubble">응, 이제 UI 꾸미는 중이야!</div>
+      <span class="time">오후 2:01</span>
+    </div>
+  </main>
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="apple-touch-icon" href="/icon-192.png">
+  <footer class="chat-input">
+    <button class="add-btn">+</button>
+    <input type="text" placeholder="메시지를 입력하세요...">
+    <button class="send-btn">전송</button>
+  </footer>
+</div>
+
+<style>
+  /* 핵심 스타일만 요약 */
+  .chat-container { display: flex; flex-direction: column; height: 100vh; background: #ABC1D1; }
+  .message-list { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  
+  .message { display: flex; align-items: flex-end; gap: 5px; }
+  .message.sent { flex-direction: row-reverse; } /* 내가 보낸 건 오른쪽으로 */
+  
+  .bubble { padding: 10px 15px; border-radius: 15px; max-width: 70%; font-size: 14px; }
+  .received .bubble { background: white; border-bottom-left-radius: 2px; }
+  .sent .bubble { background: #FEE500; border-bottom-right-radius: 2px; } /* 카톡 노란색 */
+  
+  .chat-input { display: flex; padding: 10px; background: white; gap: 10px; }
+  input { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px; }
+</style>
