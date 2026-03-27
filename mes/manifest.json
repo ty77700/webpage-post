@@ -1,0 +1,15 @@
+{
+  "name": "번개톡",
+  "short_name": "번개톡",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#bacee0",
+  "theme_color": "#bacee0",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5968/5968756.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
