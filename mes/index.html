@@ -1,41 +1,117 @@
-<div class="chat-container">
-  <header class="chat-header">
-    <button>←</button>
-    <h2>코딩 친구</h2>
-    <button>☰</button>
-  </header>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>번개톡</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 카카오톡 느낌의 배경색 */
+        body { background-color: #bacee0; font-family: sans-serif; }
+        .message-shadow { box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        /* 스크롤바 숨기기 */
+        #chat-area::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
 
-  <main class="message-list">
-    <div class="message received">
-      <div class="bubble">안녕! 프로젝트 잘 돼가?</div>
-      <span class="time">오후 2:00</span>
-    </div>
-    
-    <div class="message sent">
-      <div class="bubble">응, 이제 UI 꾸미는 중이야!</div>
-      <span class="time">오후 2:01</span>
-    </div>
-  </main>
+    <!-- 상단 헤더 -->
+    <header class="bg-[#bacee0] p-4 flex items-center justify-between sticky top-0 z-10">
+        <h1 class="text-lg font-bold text-gray-800">⚡ 번개톡 실시간 대화</h1>
+        <div id="user-count" class="text-xs text-gray-600">접속 중...</div>
+    </header>
 
-  <footer class="chat-input">
-    <button class="add-btn">+</button>
-    <input type="text" placeholder="메시지를 입력하세요...">
-    <button class="send-btn">전송</button>
-  </footer>
-</div>
+    <!-- 채팅 메시지 영역 -->
+    <main id="chat-area" class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- 메시지들이 여기에 동적으로 추가됩니다 -->
+    </main>
 
-<style>
-  /* 핵심 스타일만 요약 */
-  .chat-container { display: flex; flex-direction: column; height: 100vh; background: #ABC1D1; }
-  .message-list { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-  
-  .message { display: flex; align-items: flex-end; gap: 5px; }
-  .message.sent { flex-direction: row-reverse; } /* 내가 보낸 건 오른쪽으로 */
-  
-  .bubble { padding: 10px 15px; border-radius: 15px; max-width: 70%; font-size: 14px; }
-  .received .bubble { background: white; border-bottom-left-radius: 2px; }
-  .sent .bubble { background: #FEE500; border-bottom-right-radius: 2px; } /* 카톡 노란색 */
-  
-  .chat-input { display: flex; padding: 10px; background: white; gap: 10px; }
-  input { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px; }
-</style>
+    <!-- 하단 입력창 -->
+    <footer class="bg-white p-3 pb-8 shadow-lg">
+        <div class="flex gap-2">
+            <input type="text" id="msg-input" 
+                class="flex-1 bg-gray-100 border-none rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" 
+                placeholder="메시지를 입력하세요...">
+            <button id="send-btn" class="bg-[#fee500] hover:bg-yellow-400 text-black font-bold px-5 py-2 rounded-full transition-colors">
+                전송
+            </button>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK (내장) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded, serverTimestamp } 
+        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // ⚠️ [중요] Firebase 콘솔에서 복사한 설정을 여기에 붙여넣으세요!
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        // 닉네임 설정 (랜덤 또는 입력)
+        let myName = localStorage.getItem('nickname');
+        if (!myName) {
+            myName = prompt("사용할 닉네임을 입력해주세요!") || "익명";
+            localStorage.setItem('nickname', myName);
+        }
+
+        const chatArea = document.getElementById('chat-area');
+        const msgInput = document.getElementById('msg-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // 메시지 전송 함수
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (text === "") return;
+
+            push(messagesRef, {
+                sender: myName,
+                message: text,
+                timestamp: serverTimestamp()
+            });
+            msgInput.value = "";
+        }
+
+        sendBtn.onclick = sendMessage;
+        msgInput.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+        // 실시간 메시지 수신 및 화면 표시
+        onChildAdded(messagesRef, (data) => {
+            const msg = data.val();
+            const isMine = msg.sender === myName;
+            
+            const msgHtml = `
+                <div class="flex ${isMine ? 'justify-end' : 'justify-start'} w-full">
+                    <div class="max-w-[70%]">
+                        ${!isMine ? `<div class="text-xs text-gray-600 mb-1 ml-1">${msg.sender}</div>` : ''}
+                        <div class="${isMine ? 'bg-[#fee500] text-black' : 'bg-white text-gray-800'} 
+                            p-3 rounded-2xl message-shadow text-sm">
+                            ${msg.message}
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', msgHtml);
+            chatArea.scrollTop = chatArea.scrollHeight; // 스크롤 하단 고정
+        });
+
+        // PWA 서비스 워커 등록 (설치 가능하게 만들기)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
